@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geospatial RAG - Mining Database</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Mapbox GL JS -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet">
+    
+    <!-- Deck.gl -->
+    <script src="https://unpkg.com/deck.gl@8.9.35/dist.min.js"></script>
+    
+    <!-- Chart.js for Analysis Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="app-shell">
+        <!-- Config Banner (shown when needed) -->
+        <div id="config-banner" class="banner hidden">
+            <div class="banner-title">Configuration needed</div>
+            <div class="banner-text">Please set your Mapbox token in Settings (click the gear icon in the Chat panel).</div>
+        </div>
+
+        <!-- Main 3-Panel Layout -->
+        <div class="panel-container">
+            <!-- LEFT PANEL: Layers -->
+            <aside class="panel panel-left" id="panel-layers">
+                <div class="panel-header">
+                    <div class="panel-title">Layers</div>
+                    <button id="collapse-layers" class="btn btn-icon" title="Hide Layers">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M14.71 6.71a1 1 0 0 0-1.42 0L8 12l5.29 5.29a1 1 0 0 0 1.42-1.42L10.83 12l3.88-3.88a1 1 0 0 0 0-1.41Z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="panel-content">
+                    <!-- Map Settings Section -->
+                    <div class="panel-section">
+                        <div class="section-header">
+                            <span class="section-title">Map Settings</span>
+                        </div>
+                        <label class="form-label">
+                            <span class="label-text muted">Surface</span>
+                            <select id="map-surface" class="input">
+                                <option value="dark">Dark</option>
+                                <option value="satellite">Satellite</option>
+                                <option value="street">Street</option>
+                            </select>
+                        </label>
+                        <label class="form-label">
+                            <span class="label-text muted">View Mode</span>
+                            <select id="view-mode" class="input">
+                                <option value="2d">2D Map</option>
+                                <option value="3d">3D Map</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <!-- Visualization Controls -->
+                    <div class="panel-section">
+                        <div class="section-header">
+                            <span class="section-title">Point Visualization</span>
+                        </div>
+                        <label class="form-label">
+                            <span class="label-text muted">Point Mode</span>
+                            <select id="point-mode" class="input">
+                                <option value="scatter">Scatter</option>
+                                <option value="heatmap">Heatmap</option>
+                                <option value="hexagon">Hexagon (3D)</option>
+                            </select>
+                        </label>
+                        
+                        <!-- Scatter Controls -->
+                        <div id="scatter-controls" class="control-group">
+                            <label class="form-label">
+                                <span class="label-text muted">Point Size: <span id="scatter-radius-val">8</span></span>
+                                <input type="range" id="scatter-radius" class="input-range" min="3" max="30" value="8">
+                            </label>
+                            <label class="form-label">
+                                <span class="label-text muted">Opacity: <span id="scatter-opacity-val">80</span>%</span>
+                                <input type="range" id="scatter-opacity" class="input-range" min="10" max="100" value="80">
+                            </label>
+                        </div>
+                        
+                        <!-- Heatmap Controls -->
+                        <div id="heatmap-controls" class="control-group hidden">
+                            <label class="form-label">
+                                <span class="label-text muted">Radius: <span id="heat-radius-val">30</span></span>
+                                <input type="range" id="heat-radius" class="input-range" min="10" max="100" value="30">
+                            </label>
+                            <label class="form-label">
+                                <span class="label-text muted">Intensity: <span id="heat-intensity-val">1</span></span>
+                                <input type="range" id="heat-intensity" class="input-range" min="1" max="10" value="1">
+                            </label>
+                        </div>
+                        
+                        <!-- Hexagon Controls -->
+                        <div id="hexagon-controls" class="control-group hidden">
+                            <label class="form-label">
+                                <span class="label-text muted">Hex Radius: <span id="hex-radius-val">5</span>km</span>
+                                <input type="range" id="hex-radius" class="input-range" min="1000" max="50000" value="5000">
+                            </label>
+                            <label class="form-label">
+                                <span class="label-text muted">Elevation: <span id="hex-elevation-val">100</span></span>
+                                <input type="range" id="hex-elevation" class="input-range" min="10" max="500" value="100">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Analysis Settings -->
+                    <div class="panel-section">
+                        <div class="section-header">
+                            <span class="section-title">📊 Analysis Settings</span>
+                        </div>
+                        <label class="form-label">
+                            <span class="label-text muted">Default Cluster Distance: <span id="cluster-distance-val">5</span> km</span>
+                            <input type="range" id="cluster-distance" class="input-range" min="1" max="50" value="5" step="0.5">
+                        </label>
+                        <p class="muted" style="font-size: 11px; margin-top: 8px;">
+                            Distance used for clustering analysis (DBSCAN)
+                        </p>
+                    </div>
+
+                    <!-- Spatial Join Layer Controls -->
+                    <div id="spatial-join-controls" class="panel-section hidden">
+                        <div class="section-header">
+                            <span class="section-title">🗺️ Spatial Join Layers</span>
+                        </div>
+                        <div class="layer-toggle-group">
+                            <label class="toggle-label">
+                                <input type="checkbox" id="toggle-polygons" checked>
+                                <span class="toggle-text">Show Polygons</span>
+                            </label>
+                            <label class="toggle-label">
+                                <input type="checkbox" id="toggle-points" checked>
+                                <span class="toggle-text">Show Points</span>
+                            </label>
+                        </div>
+                        <p class="muted" style="font-size: 11px; margin-top: 8px;">
+                            Click a polygon to filter points inside it
+                        </p>
+                    </div>
+
+                    <!-- Prospectivity Prediction Section -->
+                    <div class="panel-section">
+                        <div class="section-header">
+                            <span class="section-title">🎯 Prospectivity Prediction</span>
+                        </div>
+                        <p class="muted" style="font-size: 11px; margin-bottom: 10px;">
+                            Predict mineral deposit importance (Low/Medium/High)
+                        </p>
+                        <button id="open-prospectivity-modal" class="btn btn-primary" style="width: 100%;">
+                            Open Prediction Tool
+                        </button>
+                        <div id="prospectivity-result" class="prospectivity-result hidden">
+                            <div class="prospectivity-prediction">
+                                <span class="prediction-label">Prediction:</span>
+                                <span class="prediction-value" id="prosp-prediction">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analysis Chart Section (shown after analysis) -->
+                    <div id="analysis-section" class="panel-section hidden">
+                        <div class="section-header">
+                            <span class="section-title">📊 Analysis Results</span>
+                        </div>
+                        <div id="analysis-chart-container" class="analysis-chart-wrapper">
+                            <canvas id="analysis-chart"></canvas>
+                        </div>
+                        <div id="analysis-legend-container"></div>
+                    </div>
+
+                </div>
+            </aside>
+
+            <!-- Resize Handle: Left -->
+            <div class="resize-handle resize-handle-x" id="resize-left"></div>
+
+            <!-- CENTER PANEL: Map + Table -->
+            <main class="panel panel-center">
+                <!-- Map Container -->
+                <div class="map-section" id="map-section">
+                    <div id="map2d" class="map-container"></div>
+                    <div id="map3d" class="map-container hidden"></div>
+                    
+                    <!-- Map Info Overlay -->
+                    <div id="map-info" class="map-info">
+                        <span id="feature-count">0 features</span>
+                    </div>
+                    
+                    <!-- Zoom Out Button -->
+                    <button id="zoom-out-btn" class="zoom-out-btn hidden">Zoom Out</button>
+                </div>
+
+                <!-- Resize Handle: Vertical -->
+                <div class="resize-handle resize-handle-y" id="resize-vertical"></div>
+
+                <!-- Table Section -->
+                <div class="table-section" id="table-section">
+                    <div class="panel-header">
+                        <div class="krow">
+                            <button id="collapse-table" class="btn btn-icon" title="Hide Table">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M6.71 9.29a1 1 0 0 0 0 1.42L12 16l5.29-5.29a1 1 0 1 0-1.42-1.42L12 13.17l-3.88-3.88a1 1 0 0 0-1.41 0Z"/>
+                                </svg>
+                            </button>
+                            <div>
+                                <div class="panel-title">Data Table</div>
+                                <div class="muted" style="font-size: 12px;">Click a row to highlight on map</div>
+                            </div>
+                        </div>
+                        <div class="krow">
+                            <button id="export-csv" class="btn" disabled>Export CSV</button>
+                            <button id="export-geojson" class="btn" disabled>Export GeoJSON</button>
+                            <span id="result-count" class="muted" style="font-size: 12px;">0 rows</span>
+                        </div>
+                    </div>
+                    <div class="table-scroll">
+                        <table>
+                            <thead id="table-header"></thead>
+                            <tbody id="table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Resize Handle: Right -->
+            <div class="resize-handle resize-handle-x" id="resize-right"></div>
+
+            <!-- RIGHT PANEL: Chat -->
+            <aside class="panel panel-right" id="panel-chat">
+                <div class="panel-header">
+                    <div>
+                        <div class="panel-title">Chat with NADER</div>
+                    </div>
+                    <div class="krow">
+                        <button id="settings-btn" class="btn btn-icon" title="Settings">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                            </svg>
+                        </button>
+                        <button id="collapse-chat" class="btn btn-icon" title="Collapse">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M9.29 6.71a1 1 0 0 1 1.42 0L16 12l-5.29 5.29a1 1 0 1 1-1.42-1.42L13.17 12L9.29 8.12a1 1 0 0 1 0-1.41Z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="chat-messages" class="chat-messages">
+                    <!-- Messages will be inserted here -->
+                </div>
+                
+                <div class="chat-input-area">
+                    <div class="input-row">
+                        <button id="voice-btn" class="btn btn-voice" title="Hold to speak (Arabic)">
+                            <svg id="voice-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                            </svg>
+                        </button>
+                        <textarea id="chat-input" class="input chat-input-textarea" placeholder="Chat with NADER... (or hold mic for Arabic)" rows="1"></textarea>
+                        <button id="send-btn" class="btn btn-primary">Send</button>
+                    </div>
+                    <div id="voice-status" class="voice-status hidden">
+                        <div class="voice-wave">
+                            <span></span><span></span><span></span><span></span><span></span>
+                        </div>
+                        <span id="voice-status-text">Listening...</span>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Collapsed Chat Button (shown when chat is collapsed) -->
+        <button id="expand-chat" class="expand-chat-btn hidden" title="Open Chat">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M14.71 6.71a1 1 0 0 0-1.42 0L8 12l5.29 5.29a1 1 0 0 0 1.42-1.42L10.83 12l3.88-3.88a1 1 0 0 0 0-1.41Z"/>
+            </svg>
+        </button>
+
+        <!-- Collapsed Layers Button (shown when layers is collapsed) -->
+        <button id="expand-layers" class="expand-layers-btn hidden" title="Open Layers">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9.29 6.71a1 1 0 0 1 1.42 0L16 12l-5.29 5.29a1 1 0 1 1-1.42-1.42L13.17 12L9.29 8.12a1 1 0 0 1 0-1.41Z"/>
+            </svg>
+        </button>
+
+        <!-- Collapsed Table Button (shown when table is collapsed) -->
+        <button id="expand-table" class="expand-table-btn hidden" title="Show Table">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.29 14.71a1 1 0 0 0 0-1.42L12 8l-5.29 5.29a1 1 0 1 0 1.42 1.42L12 10.83l3.88 3.88a1 1 0 0 0 1.41 0Z"/>
+            </svg>
+        </button>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay hidden">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Settings</h2>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="api-endpoint">API Endpoint</label>
+                        <input type="text" id="api-endpoint" class="input" value="http://localhost:8000">
+                    </div>
+                    <div class="form-group">
+                        <label for="mapbox-token">Mapbox Access Token</label>
+                        <input type="text" id="mapbox-token" class="input" placeholder="pk.eyJ...">
+                        <small class="muted">Get your free token at <a href="https://mapbox.com" target="_blank">mapbox.com</a></small>
+                    </div>
+                    <div class="form-group">
+                        <label for="max-results">Max Results</label>
+                        <input type="number" id="max-results" class="input" value="500" min="10" max="10000">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="save-settings" class="btn btn-primary">Save & Reload</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prospectivity Prediction Modal -->
+        <div id="prospectivity-modal" class="modal hidden">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h2>🎯 Mineral Prospectivity Prediction</h2>
+                    <button class="close-btn" id="close-prospectivity-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="prospectivity-layout">
+                        <!-- Left: Map Selection -->
+                        <div class="prospectivity-map-section">
+                            <h3>1. Select Location on Map</h3>
+                            <p class="muted">Click on a <span class="valid-zone">green zone</span> to select a valid location. <span class="invalid-zone">Red zones</span> are outside geology polygons.</p>
+                            <div id="prospectivity-map" class="prospectivity-map"></div>
+                            <div class="selected-location">
+                                <span>Selected:</span>
+                                <span id="selected-coords">Click on map to select</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Right: Form Input -->
+                        <div class="prospectivity-form-section">
+                            <h3>2. Enter Deposit Features</h3>
+                            <p class="muted">Fill in the known features (optional)</p>
+                            
+                            <div class="form-scroll">
+                                <div class="form-group">
+                                    <label for="prosp-elevation">Elevation (m)</label>
+                                    <input type="number" id="prosp-elevation" class="input" placeholder="e.g., 850">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="prosp-reg-struct">Regional Structure</label>
+                                    <select id="prosp-reg-struct" class="input">
+                                        <option value="">-- Select --</option>
+                                        <option value="Undefined">Undefined</option>
+                                        <option value="batholith; pluton">Batholith / Pluton</option>
+                                        <option value="fold">Fold</option>
+                                        <option value="shear zone">Shear Zone</option>
+                                        <option value="fault">Fault</option>
+                                        <option value="isoclinal fold; shear zone">Isoclinal Fold / Shear Zone</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="prosp-host-rocks">Host Rocks</label>
+                                    <input type="text" id="prosp-host-rocks" class="input" placeholder="e.g., granite; quartz">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="prosp-country-ro">Country Rock</label>
+                                    <input type="text" id="prosp-country-ro" class="input" placeholder="e.g., granite; granodiorite">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="prosp-gitology">Gitology</label>
+                                    <select id="prosp-gitology" class="input">
+                                        <option value="">-- Select --</option>
+                                        <option value="Unclassified">Unclassified</option>
+                                        <option value="Hydrothermal">Hydrothermal</option>
+                                        <option value="Igneous Rock">Igneous Rock</option>
+                                        <option value="Volcanic sedimentary">Volcanic Sedimentary</option>
+                                        <option value="Pegmatitic">Pegmatitic</option>
+                                        <option value="Sedimentary rocks">Sedimentary Rocks</option>
+                                        <option value="Metamorphic">Metamorphic</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="prosp-alteration">Alteration</label>
+                                    <select id="prosp-alteration" class="input">
+                                        <option value="">-- Select --</option>
+                                        <option value="undefined">Undefined</option>
+                                        <option value="silicification">Silicification</option>
+                                        <option value="epidotization">Epidotization</option>
+                                        <option value="gossan alteration">Gossan Alteration</option>
+                                        <option value="chloritization">Chloritization</option>
+                                        <option value="sericitization">Sericitization</option>
+                                        <option value="carbonatization">Carbonatization</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="prosp-min-morpho">Mineral Morphology</label>
+                                    <select id="prosp-min-morpho" class="input">
+                                        <option value="">-- Select --</option>
+                                        <option value="Undetermined">Undetermined</option>
+                                        <option value="Massive">Massive</option>
+                                        <option value="veins">Veins</option>
+                                        <option value="lenses">Lenses</option>
+                                        <option value="pods">Pods</option>
+                                        <option value="DISSEMINATION">Dissemination</option>
+                                        <option value="Stratiform">Stratiform</option>
+                                        <option value="Massive Bed">Massive Bed</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div id="modal-prediction-result" class="modal-prediction-result hidden">
+                        <div class="prediction-display">
+                            <span class="result-label">Prediction:</span>
+                            <span class="result-value" id="modal-result-value">-</span>
+                        </div>
+                    </div>
+                    <button id="run-prospectivity-prediction" class="btn btn-primary" disabled>
+                        Run Prediction
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/map2d.js"></script>
+    <script src="js/map3d.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

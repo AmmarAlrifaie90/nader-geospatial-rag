@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geospatial RAG - System Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            margin: 0;
+            padding: 40px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #ffffff;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .subtitle {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+        }
+        .diagram-container {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #334155;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        .instructions {
+            text-align: center;
+            margin-top: 30px;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        .instructions strong {
+            color: #60a5fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌍 Geospatial RAG System Architecture</h1>
+        <p class="subtitle">Natural Language to Spatial Intelligence Pipeline</p>
+        
+        <div class="diagram-container">
+            <div class="mermaid">
+flowchart TB
+    subgraph USER["👤 USER INPUT"]
+        Q["'show gold deposits in volcanic areas'"]
+    end
+
+    subgraph FRONTEND["🖥️ FRONTEND"]
+        direction LR
+        CHAT["💬 chat.js<br/>Chat Interface"]
+        API["🔌 api.js<br/>HTTP Client"]
+        MAP2D["🗺️ map2d.js<br/>2D Mapbox"]
+        MAP3D["🌐 map3d.js<br/>3D Mapbox"]
+    end
+
+    subgraph BACKEND["⚙️ BACKEND (FastAPI)"]
+        MAIN["main.py<br/>API Endpoints"]
+        
+        subgraph ORCHESTRATOR["🎯 GEOSPATIAL ORCHESTRATOR"]
+            ROUTE{"Route<br/>Request"}
+        end
+        
+        subgraph TOOLS["🛠️ PROCESSING TOOLS"]
+            direction TB
+            SQL["📝 SQL Generator<br/>tool1_sql_generator.py"]
+            ANALYSIS["📊 Spatial Analysis<br/>spatial_analysis_agent.py"]
+            ML["🤖 ML Predictor<br/>prospectivity_predictor.py"]
+        end
+        
+        subgraph LLM["🧠 LLM"]
+            OLLAMA["Ollama<br/>llama3"]
+        end
+        
+        VIZ["🎨 Visualizer<br/>analysis_visualizer.py"]
+    end
+
+    subgraph DATABASE["🗄️ PostGIS DATABASE"]
+        direction LR
+        MODS["📍 mods<br/>Deposits/Points"]
+        GEO["🔷 geology_master<br/>Polygons"]
+        FAULTS["📏 faults<br/>Lines"]
+        BORE["⚫ borholes<br/>Points"]
+    end
+
+    subgraph RESPONSE["📤 JSON RESPONSE"]
+        direction TB
+        R1["response: 'Found 156 points...'"]
+        R2["data: [...]"]
+        R3["visualization: {geojson, polygon_overlay}"]
+        R4["chart_data: {pie, bar}"]
+    end
+
+    subgraph RENDER["🖼️ RENDERED OUTPUT"]
+        direction LR
+        RMAP["🗺️ Map<br/>Points + Polygons"]
+        RTABLE["📋 Data Table<br/>Export CSV"]
+        RCHAT["💬 Chat<br/>Summary"]
+        RCHART["📊 Charts<br/>Pie/Bar"]
+    end
+
+    Q --> CHAT
+    CHAT --> API
+    API -->|"POST /api/agent"| MAIN
+    MAIN --> ROUTE
+    
+    ROUTE -->|"Data Query"| SQL
+    ROUTE -->|"Analysis Request"| ANALYSIS
+    ROUTE -->|"ML Prediction"| ML
+    
+    SQL --> OLLAMA
+    OLLAMA -->|"Generated SQL"| SQL
+    
+    SQL --> DATABASE
+    ANALYSIS --> DATABASE
+    ML --> DATABASE
+    
+    DATABASE --> VIZ
+    VIZ --> RESPONSE
+    
+    RESPONSE --> MAP2D
+    RESPONSE --> MAP3D
+    RESPONSE --> CHAT
+    
+    MAP2D --> RMAP
+    MAP3D --> RMAP
+    RESPONSE --> RTABLE
+    RESPONSE --> RCHAT
+    RESPONSE --> RCHART
+
+    style USER fill:#4f46e5,stroke:#3730a3,color:#fff
+    style FRONTEND fill:#0ea5e9,stroke:#0284c7,color:#fff
+    style BACKEND fill:#10b981,stroke:#059669,color:#fff
+    style DATABASE fill:#f59e0b,stroke:#d97706,color:#fff
+    style RESPONSE fill:#8b5cf6,stroke:#7c3aed,color:#fff
+    style RENDER fill:#ec4899,stroke:#db2777,color:#fff
+    style ORCHESTRATOR fill:#14b8a6,stroke:#0d9488,color:#fff
+    style TOOLS fill:#22c55e,stroke:#16a34a,color:#fff
+    style LLM fill:#f97316,stroke:#ea580c,color:#fff
+            </div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #4f46e5;"></div>
+                    <span>User Input</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #0ea5e9;"></div>
+                    <span>Frontend (JS/HTML)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #10b981;"></div>
+                    <span>Backend (Python/FastAPI)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f59e0b;"></div>
+                    <span>PostGIS Database</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #8b5cf6;"></div>
+                    <span>JSON Response</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ec4899;"></div>
+                    <span>Rendered Output</span>
+                </div>
+            </div>
+        </div>
+        
+        <p class="instructions">
+            <strong>To save as image:</strong> Right-click on the diagram → "Save image as..." or use Print → Save as PDF
+        </p>
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#3b82f6',
+                primaryTextColor: '#1e293b',
+                primaryBorderColor: '#2563eb',
+                lineColor: '#64748b',
+                secondaryColor: '#f1f5f9',
+                tertiaryColor: '#e2e8f0',
+                fontSize: '14px'
+            },
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis',
+                nodeSpacing: 50,
+                rankSpacing: 80
+            }
+        });
+    </script>
+</body>
+</html>

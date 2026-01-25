@@ -1,0 +1,50 @@
+version: '3.8'
+
+# =============================================================================
+# GEOSPATIAL RAG - OLLAMA SERVER WITH NVIDIA CUDA
+# =============================================================================
+# This runs on your HOME PC (RTX 3060 Ti)
+# Provides LLM inference for: SQL Generation, Routing, Analysis
+# =============================================================================
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: geospatial-ollama
+    restart: unless-stopped
+    
+    # NVIDIA GPU Support
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    
+    # Expose Ollama API
+    ports:
+      - "11434:11434"
+    
+    # Persistent storage for models
+    volumes:
+      - ollama_data:/root/.ollama
+    
+    # Environment variables
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# Persistent volume for downloaded models
+volumes:
+  ollama_data:
+    name: geospatial-ollama-models
