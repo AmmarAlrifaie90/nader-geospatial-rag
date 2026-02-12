@@ -40,6 +40,8 @@ NADER combines:
 
 ## ▶ Watch NADER in Action
 
-[Click here to Watch the Demo](https://github.com/AmmarAlrifaie90/nader-geospatial-rag/releases/download/v1.0.0/NADER_DEMO.mp4)
+[Click here to Watch the Full Demo on YouTube](https://www.youtube.com/watch?v=VAecK1zJtSw)
+
+[![Watch the Demo](https://img.youtube.com/vi/VAecK1zJtSw/0.jpg)](https://www.youtube.com/watch?v=VAecK1zJtSw)
 
 ---
