@@ -36,4 +36,10 @@ NADER combines:
 | "Cluster analysis of mineral sites" | Analyzer | Spatial analysis |
 | "Export gold sites to GeoJSON" | Exporter | File download |
 | "أين مواقع الذهب؟" | SQL Generator | Arabic support |
+# 🎥 System Demo
 
+## ▶ Watch NADER in Action
+
+[![Watch the Demo](https://img.youtube.com/vi/VAecK1zJtSw/0.jpg)](https://www.youtube.com/watch?v=VAecK1zJtSw)
+
+---
